@@ -5,16 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Interviewer</title>
     <style>
-      /* RESET / BOX-SIZING */
-      *, *::before, *::after { box-sizing: border-box; }
-
       body {
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
         margin: 0;
         background: #0b1220;
         color: #e8eefc;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
       }
       .wrap {
         max-width: 900px;
@@ -42,16 +37,16 @@
       .footer { margin-top: 18px; font-size: 12px; color: rgba(232, 238, 252, 0.6); }
     </style>
 
-    <!-- jsPDF (CDN): considera agregar SRI crossorigin en producción -->
+    <!-- jsPDF (gratis) -->
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   </head>
 
   <body>
     <div class="wrap">
-      <div class="badge" aria-hidden="true">Gratis · Sin registro</div>
+      <div class="badge">Gratis · Sin registro</div>
 
-      <main class="card" role="main" aria-labelledby="main-heading">
-        <h1 id="main-heading">Simulador de entrevista</h1>
+      <div class="card">
+        <h1>Simulador de entrevista</h1>
         <p>
           Practica entrevistas con un entrevistador IA. Responde con naturalidad, como si fuera una entrevista real.
         </p>
@@ -67,138 +62,102 @@
         <div class="footer">
           Tip: responde con ejemplos concretos (situación → acción → resultado).
         </div>
-      </main>
+      </div>
     </div>
 
     <script>
-      // Generar y descargar PDF (con manejo de errores y normalización de nombre)
-      function sanitizeFileName(name = "candidate") {
-        // Normaliza y elimina diacríticos, luego deja letras, números, guiones/guiones_bajos
-        try {
-          const normalized = name.normalize ? name.normalize('NFKD') : name;
-          return normalized
-            .replace(/[\u0300-\u036f]/g, '') // eliminar diacríticos
-            .replace(/[^\w\-]+/g, '_')
-            .replace(/^_+|_+$/g, '')
-            .slice(0, 200) || 'candidate';
-        } catch (e) {
-          return 'candidate';
-        }
-      }
-
+      // 1) Generar y descargar PDF
       function downloadPdf(payload) {
-        try {
-          const { jsPDF } = window.jspdf;
-          const doc = new jsPDF({ unit: "pt", format: "a4" });
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: "pt", format: "a4" });
 
-          const report_text = String(payload?.report_text ?? "").trim();
-          const candidate_name = String(payload?.candidate_name ?? "");
-          const company = String(payload?.company ?? "");
-          const role = String(payload?.role ?? "");
-          const seniority = String(payload?.seniority ?? "");
+        const report_text = (payload?.report_text || "").toString().trim();
+        const candidate_name = (payload?.candidate_name || "").toString();
+        const company = (payload?.company || "").toString();
+        const role = (payload?.role || "").toString();
+        const seniority = (payload?.seniority || "").toString();
 
-          const title = "HR Evaluation Report";
-          const meta = [
-            candidate_name ? `Candidate: ${candidate_name}` : "",
-            company ? `Company: ${company}` : "",
-            role ? `Role: ${role}` : "",
-            seniority ? `Seniority: ${seniority}` : "",
-          ].filter(Boolean).join(" | ");
+        const title = "HR Evaluation Report";
+        const meta = [
+          candidate_name ? `Candidate: ${candidate_name}` : "",
+          company ? `Company: ${company}` : "",
+          role ? `Role: ${role}` : "",
+          seniority ? `Seniority: ${seniority}` : "",
+        ].filter(Boolean).join(" | ");
 
-          const marginX = 40;
-          let y = 56;
+        const marginX = 40;
+        let y = 56;
 
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(16);
-          doc.text(title, marginX, y);
-          y += 18;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text(title, marginX, y);
+        y += 18;
 
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(10);
-          const metaLines = doc.splitTextToSize(meta || "", 515);
-          if (metaLines.length) {
-            doc.text(metaLines, marginX, y);
-            y += metaLines.length * 12 + 14;
-          } else {
-            y += 8;
-          }
-
-          doc.setFontSize(11);
-
-          const text = report_text || "No report text received.";
-          const lines = doc.splitTextToSize(text, 515);
-
-          const pageHeight = doc.internal.pageSize.getHeight();
-          const bottom = pageHeight - 40;
-
-          for (const line of lines) {
-            if (y > bottom) {
-              doc.addPage();
-              y = 56;
-            }
-            doc.text(line, marginX, y);
-            y += 14;
-          }
-
-          const safeName = sanitizeFileName(candidate_name);
-          doc.save(`HR_Report_${safeName}.pdf`);
-        } catch (err) {
-          console.error("Error generating PDF:", err);
-          alert("No se pudo generar el PDF. Revisa la consola para más detalles.");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        const metaLines = doc.splitTextToSize(meta || "", 515);
+        if (metaLines.length) {
+          doc.text(metaLines, marginX, y);
+          y += metaLines.length * 12 + 14;
+        } else {
+          y += 8;
         }
+
+        doc.setFontSize(11);
+
+        const text = report_text || "No report text received.";
+        const lines = doc.splitTextToSize(text, 515);
+
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const bottom = pageHeight - 40;
+
+        for (const line of lines) {
+          if (y > bottom) {
+            doc.addPage();
+            y = 56;
+          }
+          doc.text(line, marginX, y);
+          y += 14;
+        }
+
+        const safeName = (candidate_name || "candidate").replace(/[^\w\-]+/g, "_");
+        doc.save(`HR_Report_${safeName}.pdf`);
       }
 
-      // Voiceflow effect extension (comprobaciones y logging)
+      // 2) ✅ Voiceflow EFFECT EXTENSION (esto es lo clave)
+      // Se dispara cuando Voiceflow emite un Custom Action con nombre DOWNLOAD_REPORT_PDF
       const downloadReportExtension = {
         name: "DOWNLOAD_REPORT_PDF",
         type: "effect",
-        match: ({ trace }) => {
-          // Ajusta esto según la estructura real del trace. Se recomienda loggear el trace en desarrollo.
-          if (!trace) return false;
-          // Ejemplos de comprobación: trace.type === 'DOWNLOAD_REPORT_PDF' || trace?.payload?.name === 'DOWNLOAD_REPORT_PDF'
-          return trace?.type === "DOWNLOAD_REPORT_PDF" || trace?.payload?.name === "DOWNLOAD_REPORT_PDF";
-        },
+        match: ({ trace }) => trace?.type === "DOWNLOAD_REPORT_PDF",
         effect: async ({ trace }) => {
-          try {
-            const payload = trace?.payload || {};
-            console.log("DOWNLOAD_REPORT_PDF payload:", payload, "full trace:", trace);
-            downloadPdf(payload);
-          } catch (err) {
-            console.error("Error in downloadReportExtension effect:", err);
-          }
+          // El payload suele venir en trace.payload (según tu Action Body)
+          const payload = trace?.payload || {};
+          console.log("DOWNLOAD_REPORT_PDF payload:", payload);
+          downloadPdf(payload);
         },
       };
 
-      // Cargar widget y registrar extensions
+      // 3) Cargar widget y registrar extensions
       (function (d, t) {
-        const v = d.createElement(t);
-        const s = d.getElementsByTagName(t)[0];
+        var v = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
 
         v.onload = function () {
-          try {
-            if (!window.voiceflow || !window.voiceflow.chat || !window.voiceflow.chat.load) {
-              console.warn("voiceflow.chat no está disponible tras la carga del script.");
-              return;
-            }
+          window.voiceflow.chat.load({
+            verify: { projectID: "6981de99392d1c3e0b9084bf" },
+            url: "https://general-runtime.voiceflow.com",
+            versionID: "production",
+            voice: { url: "https://runtime-api.voiceflow.com" },
 
-            window.voiceflow.chat.load({
-              verify: { projectID: "6981de99392d1c3e0b9084bf" },
-              url: "https://general-runtime.voiceflow.com",
-              versionID: "production",
-              voice: { url: "https://runtime-api.voiceflow.com" },
-
-              assistant: {
-                extensions: [downloadReportExtension],
-              },
-            });
-          } catch (err) {
-            console.error("Error inicializando Voiceflow widget:", err);
-          }
+            assistant: {
+              extensions: [downloadReportExtension],
+            },
+          });
         };
 
         v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs";
-        v.type = "module"; // si el bundle es ESM. Si no, usar "text/javascript".
-        v.defer = true;
+        v.type = "text/javascript";
         s.parentNode.insertBefore(v, s);
       })(document, "script");
     </script>
